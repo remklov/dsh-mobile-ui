@@ -1,0 +1,4 @@
+# Additive: never disable or reconfigure the host's authentication or UI plugins.
+- insert:
+    - id: mobile-workbench
+      name: dsh-mobile-workbench
