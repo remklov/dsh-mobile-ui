@@ -119,7 +119,8 @@ worker cannot serve stale pages, but explicit cleanup is recommended.
 - `npm run icons`: regenerate original PNG icons reproducibly without image tools.
 - `npm pack --dry-run`: inspect the explicit publish allowlist.
 
-Commit source, tests, docs, icons and `package-lock.json`. Do not commit `lib`,
+Commit source, tests, docs, icons, `package-lock.json`, and the reproducible
+prebuilt `lib/` output so DSH can install directly from GitHub. Do not commit
 `node_modules`, test output, host data, credential files or machine configuration.
 The `.gitignore` is defense in depth, not a substitute for reviewing staged files.
 The root of this repository must stay separate from your DSH home/configuration.
