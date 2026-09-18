@@ -36,8 +36,15 @@ export declare const manifest: {
  * The browser's network stack remains authoritative for every request.
  */
 export declare const workerScript = "// DSH Mobile Workbench v0.1.0 \u2014 network-only worker.\nself.addEventListener('install', (event) => {\n  event.waitUntil(self.skipWaiting());\n});\nself.addEventListener('activate', (event) => {\n  event.waitUntil(self.clients.claim());\n});\n// Present only because Chrome requires a registered fetch handler before it\n// will offer installation. It deliberately never calls respondWith(), so every\n// request goes straight to the network exactly as it would without a worker \u2014\n// no caching, no offline page, no auth interception.\nself.addEventListener('fetch', () => {});\n";
-/** Do not replace a pre-existing PWA owner. Only the shell index is transformed;
- * auth plugins' separately served login pages are not touched.
+/** Replace the shell's own PWA identity, but stand down for any other owner.
+ *
+ * dsh-web-frontend ships a manifest declaring one SVG icon and no service
+ * worker, which no browser will install. Treating it as a competing owner used
+ * to disable this plugin's entire PWA support. A manifest from another plugin
+ * is still a reason to leave everything alone.
+ *
+ * Only the shell index is transformed; auth plugins' separately served login
+ * pages are not touched.
  */
 export declare function injectHead(html: string): string;
 export type AssetReader = (name: string) => Buffer;

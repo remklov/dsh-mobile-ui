@@ -12,6 +12,15 @@ export declare function keyboardViewport(layoutHeight: number, viewport: Viewpor
     top: number;
 } | null;
 export declare function isOwnWorker(scriptURL: string, origin: string): boolean;
+/** The manifest dsh-web-frontend ships with its shell (`./manifest.webmanifest`).
+ * It declares a single SVG icon and no service worker, so it can never be
+ * installed. It is the state this plugin exists to replace - not a competing
+ * owner. A manifest from any OTHER plugin still is one.
+ */
+export declare const SHELL_MANIFEST_PATH = "/manifest.webmanifest";
+export declare function isShellManifest(href: string, origin: string): boolean;
+/** Ours, or the shell default we are allowed to take over. */
+export declare function isReplaceableManifest(href: string, origin: string): boolean;
 export declare function isOwnManifest(href: string, origin: string): boolean;
 export declare function isAppleMobile(userAgent: string, platform: string, touchPoints: number): boolean;
 /** Layout 0.1.5 has independent narrow (<1024) and desktop sidebar preferences. */

@@ -1,4 +1,4 @@
-import { isOwnManifest, isOwnWorker, WORKER_PATH } from './helpers.js'
+import { isReplaceableManifest, isOwnWorker, WORKER_PATH } from './helpers.js'
 
 export type WorkerStatus = 'unsupported' | 'registered' | 'conflict' | 'failed' | 'reset'
 
@@ -10,7 +10,7 @@ export function registrationIsOwned(registration: Pick<ServiceWorkerRegistration
 
 export async function registerOwnWorker(container: ServiceWorkerContainer | undefined, origin: string, secure: boolean, manifestHrefs: readonly string[] = []): Promise<WorkerStatus> {
   if (!secure || !container) return 'unsupported'
-  if (manifestHrefs.some(href => !isOwnManifest(href, origin))) return 'conflict'
+  if (manifestHrefs.some(href => !isReplaceableManifest(href, origin))) return 'conflict'
   try {
     const existing = await container.getRegistration(`${origin}/`)
     if (existing && !registrationIsOwned(existing, origin)) return 'conflict'

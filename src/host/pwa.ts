@@ -57,13 +57,28 @@ const HEAD = [
   `<link data-mobile-workbench-head rel="apple-touch-icon" href="${BASE}/icons/apple-touch-icon.png">`,
 ].join('\n')
 
-/** Do not replace a pre-existing PWA owner. Only the shell index is transformed;
- * auth plugins' separately served login pages are not touched.
+/** Matches a <link rel="manifest"> tag. */
+const MANIFEST_LINK = /<link\b[^>]*\brel\s*=\s*(?:["']manifest["']|manifest(?=\s|>))[^>]*>/gi
+
+/** The shell's own manifest, written by dsh-web-frontend as `./manifest.webmanifest`. */
+const SHELL_MANIFEST_HREF = /\bhref\s*=\s*["']\.?\/?manifest\.webmanifest["']/i
+
+/** Replace the shell's own PWA identity, but stand down for any other owner.
+ *
+ * dsh-web-frontend ships a manifest declaring one SVG icon and no service
+ * worker, which no browser will install. Treating it as a competing owner used
+ * to disable this plugin's entire PWA support. A manifest from another plugin
+ * is still a reason to leave everything alone.
+ *
+ * Only the shell index is transformed; auth plugins' separately served login
+ * pages are not touched.
  */
 export function injectHead(html: string): string {
   if (/data-mobile-workbench-head/i.test(html)) return html
-  if (/<link\b[^>]*\brel\s*=\s*(?:["']manifest["']|manifest(?=\s|>))/i.test(html)) return html
+  const existing = html.match(MANIFEST_LINK) ?? []
+  if (existing.some(tag => !SHELL_MANIFEST_HREF.test(tag))) return html
   if (!/<head(?:\s[^>]*)?>/i.test(html)) return html
+  html = html.replace(MANIFEST_LINK, '')
   // Retain the host's viewport, font scaling, and zoom. Add safe-area support
   // without creating duplicate viewport tags or disabling accessibility zoom.
   let output = html.replace(/<meta\b(?=[^>]*\bname\s*=\s*["']viewport["'])[^>]*>/gi, (tag) => {

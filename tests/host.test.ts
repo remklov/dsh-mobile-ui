@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import vm from 'node:vm'
 import { createPwaHandler, injectHead, manifest, workerScript, BASE, WORKER_PATH } from '../src/host/pwa.js'
+import { MANIFEST_PATH } from '../src/host/pwa.js'
+import { isShellManifest, isReplaceableManifest } from '../src/client/helpers.js'
 
 async function listen(server: Server) {
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -53,6 +55,40 @@ test('head injection preserves zoom, is idempotent, and respects another manifes
   assert.equal(injectHead(owned), owned)
   assert.equal(injectHead('no head'), 'no head')
   assert.match(injectHead('<head></head>'), /name="viewport"/)
+})
+
+test('the shell default manifest is replaced, a foreign one is not', () => {
+  const head = (link: string) =>
+    `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">${link}</head><body></body></html>`
+
+  // dsh-web-frontend writes exactly this. It declares a single SVG icon and no
+  // service worker, so leaving it in place makes the app uninstallable — which
+  // is precisely what this plugin is here to fix.
+  for (const href of ['./manifest.webmanifest', '/manifest.webmanifest', 'manifest.webmanifest']) {
+    const output = injectHead(head(`<link rel="manifest" href="${href}">`))
+    assert.match(output, new RegExp(`href="${MANIFEST_PATH}"`), `${href} should have been replaced`)
+    assert.equal((output.match(/rel="manifest"/g) ?? []).length, 1, `${href} left a duplicate manifest link`)
+  }
+
+  // Another plugin claiming the identity is still a reason to stand down
+  // completely — including our own head metadata.
+  for (const href of ['/other.webmanifest', 'https://example.test/manifest.webmanifest']) {
+    const input = head(`<link rel="manifest" href="${href}">`)
+    assert.equal(injectHead(input), input, `${href} must be left untouched`)
+  }
+})
+
+test('shell and own manifests are replaceable, foreign ones are not', () => {
+  const origin = 'https://harness.test'
+  assert.equal(isShellManifest('./manifest.webmanifest', origin), true)
+  assert.equal(isShellManifest('/manifest.webmanifest', origin), true)
+  assert.equal(isShellManifest('/other.webmanifest', origin), false)
+  assert.equal(isShellManifest('https://example.test/manifest.webmanifest', origin), false,
+    'same path on a different origin is not the shell manifest')
+
+  assert.equal(isReplaceableManifest(MANIFEST_PATH, origin), true, 'our own manifest')
+  assert.equal(isReplaceableManifest('/manifest.webmanifest', origin), true, 'the shell default')
+  assert.equal(isReplaceableManifest('/other.webmanifest', origin), false, 'another plugin')
 })
 
 test('worker never intercepts a request and touches no storage', async () => {

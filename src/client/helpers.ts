@@ -22,6 +22,25 @@ export function isOwnWorker(scriptURL: string, origin: string): boolean {
   } catch { return false }
 }
 
+/** The manifest dsh-web-frontend ships with its shell (`./manifest.webmanifest`).
+ * It declares a single SVG icon and no service worker, so it can never be
+ * installed. It is the state this plugin exists to replace - not a competing
+ * owner. A manifest from any OTHER plugin still is one.
+ */
+export const SHELL_MANIFEST_PATH = '/manifest.webmanifest'
+
+export function isShellManifest(href: string, origin: string): boolean {
+  try {
+    const url = new URL(href, origin)
+    return url.origin === origin && url.pathname === SHELL_MANIFEST_PATH
+  } catch { return false }
+}
+
+/** Ours, or the shell default we are allowed to take over. */
+export function isReplaceableManifest(href: string, origin: string): boolean {
+  return isOwnManifest(href, origin) || isShellManifest(href, origin)
+}
+
 export function isOwnManifest(href: string, origin: string): boolean {
   try {
     const url = new URL(href, origin)
