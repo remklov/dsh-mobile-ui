@@ -55,19 +55,41 @@ test('head injection preserves zoom, is idempotent, and respects another manifes
   assert.match(injectHead('<head></head>'), /name="viewport"/)
 })
 
-test('worker is lifecycle-only; no fetch interception or data/cache storage', async () => {
-  const events = new Map<string, (event: { waitUntil(p: Promise<unknown>): void }) => void>()
+test('worker never intercepts a request and touches no storage', async () => {
+  interface WorkerEvent {
+    waitUntil(p: Promise<unknown>): void
+    respondWith(response: unknown): void
+  }
+  const events = new Map<string, (event: WorkerEvent) => void>()
   let claimed = 0
   vm.runInNewContext(workerScript, { self: {
-    addEventListener: (name: string, cb: (event: { waitUntil(p: Promise<unknown>): void }) => void) => events.set(name, cb),
+    addEventListener: (name: string, cb: (event: WorkerEvent) => void) => events.set(name, cb),
     skipWaiting: async () => {}, clients: { claim: async () => { claimed++ } },
   } })
-  assert.deepEqual([...events.keys()], ['install', 'activate'])
-  for (const listener of events.values()) {
+
+  // The fetch handler exists only to satisfy Chrome's installability check.
+  assert.deepEqual([...events.keys()], ['install', 'activate', 'fetch'])
+
+  for (const name of ['install', 'activate'] as const) {
     let pending: Promise<unknown> | undefined
-    listener({ waitUntil: p => { pending = p } })
+    events.get(name)!({
+      waitUntil: p => { pending = p },
+      respondWith: () => assert.fail(`${name} must not call respondWith`),
+    })
     await pending
   }
   assert.equal(claimed, 1)
-  assert.doesNotMatch(workerScript, /\b(?:caches|fetch|indexedDB|localStorage|cookie)\b/)
+
+  // The point of the whole design: the browser's network stack stays
+  // authoritative. Calling respondWith would be the moment we took over.
+  let intercepted = false
+  events.get('fetch')!({
+    waitUntil: () => assert.fail('the fetch handler must not extend the event'),
+    respondWith: () => { intercepted = true },
+  })
+  assert.equal(intercepted, false, 'the fetch handler must not intercept the request')
+
+  // Interception is proven behaviourally above; this only guards the storage
+  // APIs, which a string check can actually rule out.
+  assert.doesNotMatch(workerScript, /\b(?:caches|indexedDB|localStorage|cookie)\b/)
 })

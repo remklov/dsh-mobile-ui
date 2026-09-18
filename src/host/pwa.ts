@@ -27,7 +27,9 @@ export const manifest = {
   ],
 } as const
 
-/** Intentionally NO fetch handler, CacheStorage, offline page, or auth interception.
+/** Intentionally NO CacheStorage, offline page, or auth interception. The
+ * fetch handler exists solely to satisfy Chrome's installability check and
+ * is a no-op.
  * The browser's network stack remains authoritative for every request.
  */
 export const workerScript = `// DSH Mobile Workbench v0.1.0 — network-only worker.
@@ -37,6 +39,11 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
+// Present only because Chrome requires a registered fetch handler before it
+// will offer installation. It deliberately never calls respondWith(), so every
+// request goes straight to the network exactly as it would without a worker —
+// no caching, no offline page, no auth interception.
+self.addEventListener('fetch', () => {});
 `
 
 const HEAD = [

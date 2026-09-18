@@ -30,10 +30,12 @@ export declare const manifest: {
         readonly purpose: "maskable";
     }];
 };
-/** Intentionally NO fetch handler, CacheStorage, offline page, or auth interception.
+/** Intentionally NO CacheStorage, offline page, or auth interception. The
+ * fetch handler exists solely to satisfy Chrome's installability check and
+ * is a no-op.
  * The browser's network stack remains authoritative for every request.
  */
-export declare const workerScript = "// DSH Mobile Workbench v0.1.0 \u2014 network-only worker.\nself.addEventListener('install', (event) => {\n  event.waitUntil(self.skipWaiting());\n});\nself.addEventListener('activate', (event) => {\n  event.waitUntil(self.clients.claim());\n});\n";
+export declare const workerScript = "// DSH Mobile Workbench v0.1.0 \u2014 network-only worker.\nself.addEventListener('install', (event) => {\n  event.waitUntil(self.skipWaiting());\n});\nself.addEventListener('activate', (event) => {\n  event.waitUntil(self.clients.claim());\n});\n// Present only because Chrome requires a registered fetch handler before it\n// will offer installation. It deliberately never calls respondWith(), so every\n// request goes straight to the network exactly as it would without a worker \u2014\n// no caching, no offline page, no auth interception.\nself.addEventListener('fetch', () => {});\n";
 /** Do not replace a pre-existing PWA owner. Only the shell index is transformed;
  * auth plugins' separately served login pages are not touched.
  */
