@@ -1,6 +1,6 @@
 /** Pure, dependency-free mobile calculations; no access to auth or application state. */
 export const MOBILE_QUERY = '(max-width: 767px)'
-export const WORKER_PATH = '/mobile-workbench/sw.js'
+export const WORKER_PATH = '/auth/mobile-workbench-pwa/sw.js'
 
 export interface ViewportSample {
   height: number
@@ -25,7 +25,7 @@ export function isOwnWorker(scriptURL: string, origin: string): boolean {
 export function isOwnManifest(href: string, origin: string): boolean {
   try {
     const url = new URL(href, origin)
-    return url.origin === origin && url.pathname === '/mobile-workbench/manifest.webmanifest'
+    return url.origin === origin && url.pathname === '/auth/mobile-workbench-pwa/manifest.webmanifest'
   } catch { return false }
 }
 

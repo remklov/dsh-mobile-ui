@@ -33,7 +33,7 @@ import { gunzipSync } from 'node:zlib'
 const self = fileURLToPath(import.meta.url)
 const repository = resolve(dirname(self), '..')
 const mobileEntry = join(repository, 'lib/index.js')
-const BASE = '/mobile-workbench'
+const BASE = '/auth/mobile-workbench-pwa'
 const MANIFEST = `${BASE}/manifest.webmanifest`
 const SW = `${BASE}/sw.js`
 const AUDITED_RUNTIME = '0.1.5-rc.2'
@@ -84,6 +84,7 @@ async function supervisor() {
         XDG_CACHE_HOME: join(temporary, 'cache'), XDG_STATE_HOME: join(temporary, 'state'),
         TMPDIR: join(temporary, 'tmp'), TMP: join(temporary, 'tmp'), TEMP: join(temporary, 'tmp'),
         DSH_RUNTIME_ROOT: installs.runtimeRoot, DSH_AUTH_PLUGIN_PATH: installs.authEntry,
+        DSH_MOBILE_PLUGIN_ENTRY: mobileEntry,
         DSH_MOBILE_TEST_ROOT: temporary, NODE_ENV: 'test', NO_COLOR: '1',
       }
       // Windows' loader may need these, but no environment settings are otherwise inherited.
@@ -110,6 +111,8 @@ async function isolatedChild(order) {
   assert.equal(requiredPath('HOME'), realpathSync(join(temporary, 'home')))
   assert.equal(requiredPath('DSH_HOME'), realpathSync(join(temporary, 'dsh-home')))
   const installs = inspectInstallations()
+  const childMobileEntry = process.env.DSH_MOBILE_PLUGIN_ENTRY
+  assert(childMobileEntry && isAbsolute(childMobileEntry) && existsSync(childMobileEntry), 'Missing absolute DSH_MOBILE_PLUGIN_ENTRY')
   const authRequire = createRequire(installs.authEntry)
   // Confirm the actual home helper resolved by THIS auth installation, before
   // importing or activating auth. Importing the helper itself has no state I/O.
@@ -126,7 +129,7 @@ async function isolatedChild(order) {
     import(pathToFileURL(installs.paths['dsh-client-connection'])),
     import(pathToFileURL(installs.paths['dsh-host-frontend-static'])),
     import(pathToFileURL(installs.authEntry)),
-    import(pathToFileURL(mobileEntry)),
+    import(pathToFileURL(childMobileEntry)),
   ])
   const app = new Context()
   const records = new Map()
@@ -184,6 +187,7 @@ async function isolatedChild(order) {
       mobileFiber = await app.plugin(mobile)
       authFiber = await app.plugin(auth, authConfig)
     }
+    assert(app.webServer.exact.has(MANIFEST), `Manifest route missing after ${order} plugin readiness`)
 
     // Node HTTP rather than fetch: explicit synthetic cookie jar, exact Host,
     // raw gzip responses, and no implicit redirects/cookies from any user agent.
@@ -234,9 +238,9 @@ async function isolatedChild(order) {
     const assets = [MANIFEST, SW, `${BASE}/icons/icon-192.png`, `${BASE}/icons/icon-512.png`, `${BASE}/icons/apple-touch-icon.png`]
     for (const path of assets) {
       const response = await call(path)
-      equal(response.status, 403, `Unauthenticated named route is gated: ${path}`)
-      equal(JSON.parse(response.text).error, 'unauthorized')
-      check(response.headers['cache-control'].includes('no-store'), 'Auth denial is not cacheable')
+      equal(response.status, 200, `Anonymous installer asset is public: ${path}`)
+      check(!response.text.includes('unauthorized'), `Public metadata never returns auth JSON (content-type ${response.headers['content-type'] ?? 'missing'})`)
+      if (path === MANIFEST) check(response.headers['content-type']?.startsWith('application/manifest+json'), `Anonymous manifest has manifest MIME (received ${response.headers['content-type'] ?? 'missing'})`)
     }
     const loginPage = await call('/')
     equal(loginPage.status, 200, 'Unauthenticated root is self-contained login HTML')
@@ -248,7 +252,7 @@ async function isolatedChild(order) {
       for (const path of assets) {
         const response = await call(path, { jar: admin, gzip })
         equal(response.status, 200, `Authenticated asset ${path}, gzip=${gzip}`)
-        check(response.headers['cache-control'].includes('no-store'), 'No-store survives real middleware')
+        check(response.headers['cache-control'].includes('public'), 'Public cache policy survives real middleware')
         check(!response.headers['cache-control'].includes('immutable'), 'No immutable override for namespace')
         equal(response.headers['x-content-type-options'], 'nosniff')
         if (path === MANIFEST) {
@@ -268,17 +272,17 @@ async function isolatedChild(order) {
     const shell = await call('/', { jar: admin })
     equal(shell.status, 200, 'Authenticated real frontend-static serves index')
     check(shell.text.includes('ISOLATED SHELL'), 'Not a login error page')
-    check(shell.text.includes('crossorigin="use-credentials"'), 'Credentialed manifest injected after auth')
+    check(shell.text.includes('crossorigin="anonymous"'), 'Anonymous public manifest injected after auth')
     const head = await call(SW, { jar: admin, method: 'HEAD', gzip: true })
     equal(head.status, 200)
     equal(head.bytes.length, 0, 'HEAD remains empty through auth/gzip')
     equal(head.headers['service-worker-allowed'], '/')
 
-    // Core browser-cookie healing takes effect on the NEXT request, not by
-    // modifying current request headers. Named PWA routes need only outer auth.
+    // Public installation assets bypass auth intentionally and therefore never
+    // mint or repair either auth layer's cookies.
     const sessionOnly = new Map([['fixture_session', admin.get('fixture_session')]])
-    equal((await call(MANIFEST, { jar: sessionOnly })).status, 200, 'PWA still works when core cookie was evicted')
-    check([...sessionOnly.keys()].some(key => key.startsWith('dsh-auth-')), 'PWA response self-heals loopback core cookie')
+    equal((await call(MANIFEST, { jar: sessionOnly })).status, 200, 'Public metadata works without the core cookie')
+    check(![...sessionOnly.keys()].some(key => key.startsWith('dsh-auth-')), 'Public metadata does not mint authentication cookies')
     const indexOnlySession = new Map([['fixture_session', admin.get('fixture_session')]])
     equal((await call('/', { jar: indexOnlySession })).status, 401, 'First index request without core cookie is 401')
     equal((await call('/', { jar: indexOnlySession })).status, 200, 'Index succeeds after cookie healing')
@@ -290,19 +294,19 @@ async function isolatedChild(order) {
     equal((await call(MANIFEST, { jar: guest })).status, 200, 'Guest may fetch static metadata')
     const removed = await call('/auth/accounts', { jar: admin, method: 'POST', json: { action: 'remove', username: 'fixture-guest' } })
     check(JSON.parse(removed.text).removed, 'Synthetic guest removed through real auth endpoint')
-    equal((await call(MANIFEST, { jar: guest })).status, 403, 'Removed account cannot use old session')
+    equal((await call(MANIFEST, { jar: guest })).status, 200, 'Removed account can fetch only public install metadata')
 
     // Sign only a SYNTHETIC expired session with this test's explicit secret;
     // never read the generated account store or any real credential material.
     const payload = Buffer.from(JSON.stringify({ sub: 'fixture-admin', role: 'admin', iat: Date.now() - 120_000, exp: Date.now() - 60_000 })).toString('base64url')
     const expired = `v1.${payload}.${createHmac('sha256', secret).update(`v1.${payload}`).digest('base64url')}`
-    equal((await call(SW, { jar: new Map([['fixture_session', expired]]) })).status, 403, 'Expired session prevents worker update')
+    equal((await call(SW, { jar: new Map([['fixture_session', expired]]) })).status, 200, 'Expired session does not prevent static worker update')
 
     const logout = await call('/auth/logout', { jar: admin, method: 'POST', json: {} })
     equal(logout.status, 200)
     check(!admin.has('fixture_session'), 'Logout removed outer session from test jar')
     check([...admin.keys()].some(key => key.startsWith('dsh-auth-')), 'Core cookies remain, matching real auth logout')
-    equal((await call(SW, { jar: admin })).status, 403, 'Remaining core cookies cannot bypass outer auth')
+    equal((await call(SW, { jar: admin })).status, 200, 'Logged-out client can update only the public static worker')
 
     const active = await login('fixture-admin')
     await mobileFiber.dispose()
@@ -310,7 +314,7 @@ async function isolatedChild(order) {
     check(!(await call('/', { jar: active })).text.includes('data-mobile-workbench-head'), 'Disposal removes index tap')
     mobileFiber = await app.plugin(mobile)
     equal((await call(MANIFEST, { jar: active })).status, 200, 'Reactivation works without duplicate-route failure')
-    equal((await call(MANIFEST)).status, 403, 'Reactivated route stays auth gated')
+    equal((await call(MANIFEST)).status, 200, 'Reactivated public route remains anonymous')
     await authFiber.dispose()
     equal((await call(MANIFEST)).status, 200, 'Auth disposal unwraps plugin route; only public static metadata remains')
     const afterAuthDispose = await call('/')

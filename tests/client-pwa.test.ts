@@ -13,7 +13,7 @@ function container(existing: ServiceWorkerRegistration | undefined, all: Service
     controller: null,
     getRegistration: async () => existing,
     getRegistrations: async () => all,
-    register: async (...args: unknown[]) => { calls.push(args); return registration('/mobile-workbench/sw.js') },
+    register: async (...args: unknown[]) => { calls.push(args); return registration('/auth/mobile-workbench-pwa/sw.js') },
   }
   return { mock: mock as unknown as ServiceWorkerContainer, calls }
 }
@@ -21,7 +21,7 @@ function container(existing: ServiceWorkerRegistration | undefined, all: Service
 test('registration uses same-origin root scope and avoids HTTP/unsupported contexts', async () => {
   const { mock, calls } = container(undefined)
   assert.equal(await registerOwnWorker(mock, origin, true), 'registered')
-  assert.deepEqual(calls, [['/mobile-workbench/sw.js', { scope: '/', updateViaCache: 'none' }]])
+  assert.deepEqual(calls, [['/auth/mobile-workbench-pwa/sw.js', { scope: '/', updateViaCache: 'none' }]])
   assert.equal(await registerOwnWorker(mock, origin, false), 'unsupported')
   assert.equal(await registerOwnWorker(undefined, origin, true), 'unsupported')
   assert.equal(calls.length, 1)
@@ -31,7 +31,7 @@ test('foreign root registration, pending worker, and manifest are never replaced
   const foreign = container(registration('/other/sw.js'))
   assert.equal(await registerOwnWorker(foreign.mock, origin, true), 'conflict')
   assert.equal(foreign.calls.length, 0)
-  const mixed = registration('/mobile-workbench/sw.js')
+  const mixed = registration('/auth/mobile-workbench-pwa/sw.js')
   Object.assign(mixed, { waiting: worker('/other/sw.js') })
   assert.equal(registrationIsOwned(mixed, origin), false)
   assert.equal(await registerOwnWorker(container(mixed).mock, origin, true), 'conflict')
@@ -48,7 +48,7 @@ test('unknown controlling worker is not silently replaced', async () => {
 })
 
 test('own existing worker may update, but registration errors are graceful', async () => {
-  const { mock, calls } = container(registration('/mobile-workbench/sw.js'))
+  const { mock, calls } = container(registration('/auth/mobile-workbench-pwa/sw.js'))
   assert.equal(await registerOwnWorker(mock, origin, true), 'registered')
   assert.equal(calls.length, 1)
   Object.assign(mock, { register: async () => { throw new Error('blocked') } })
@@ -57,9 +57,9 @@ test('own existing worker may update, but registration errors are graceful', asy
 
 test('explicit reset unregisters only own workers and never touches caches', async () => {
   const removed: string[] = []
-  const own = registration('/mobile-workbench/sw.js', () => removed.push('own'))
+  const own = registration('/auth/mobile-workbench-pwa/sw.js', () => removed.push('own'))
   const foreign = registration('/other/sw.js', () => removed.push('foreign'))
-  const mixed = registration('/mobile-workbench/sw.js', () => removed.push('mixed'))
+  const mixed = registration('/auth/mobile-workbench-pwa/sw.js', () => removed.push('mixed'))
   Object.assign(mixed, { installing: worker('/other/sw.js') })
   const { mock } = container(own, [own, foreign, mixed])
   assert.equal(await unregisterOwnWorkers(mock, origin), 1)

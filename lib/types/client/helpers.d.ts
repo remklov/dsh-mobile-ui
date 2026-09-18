@@ -1,6 +1,6 @@
 /** Pure, dependency-free mobile calculations; no access to auth or application state. */
 export declare const MOBILE_QUERY = "(max-width: 767px)";
-export declare const WORKER_PATH = "/mobile-workbench/sw.js";
+export declare const WORKER_PATH = "/auth/mobile-workbench-pwa/sw.js";
 export interface ViewportSample {
     height: number;
     offsetTop: number;

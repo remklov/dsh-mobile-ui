@@ -1,7 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readFileSync } from 'node:fs'
 
-export const BASE = '/mobile-workbench'
+// @xgone/dsh-remote intentionally leaves /auth/* ungated. PWA metadata must be
+// fetchable by Android's installer, which may not share the browser cookie jar.
+// These files are static, contain no user data, and grant no DSH access.
+export const BASE = '/auth/mobile-workbench-pwa'
 export const WORKER_PATH = `${BASE}/sw.js`
 export const MANIFEST_PATH = `${BASE}/manifest.webmanifest`
 
@@ -36,8 +39,9 @@ self.addEventListener('activate', (event) => {
 `
 
 const HEAD = [
-  // Authenticated manifests require use-credentials even on the same origin.
-  `<link data-mobile-workbench-head rel="manifest" href="${MANIFEST_PATH}" crossorigin="use-credentials">`,
+  // Anonymous mode is intentional: Android installation services may fetch the
+  // manifest/icons outside the signed-in tab's cookie jar.
+  `<link data-mobile-workbench-head rel="manifest" href="${MANIFEST_PATH}" crossorigin="anonymous">`,
   '<meta data-mobile-workbench-head name="mobile-web-app-capable" content="yes">',
   '<meta data-mobile-workbench-head name="apple-mobile-web-app-capable" content="yes">',
   '<meta data-mobile-workbench-head name="apple-mobile-web-app-title" content="DSH">',
@@ -69,15 +73,17 @@ export type AssetReader = (name: string) => Buffer
 // Bundled entry lives directly in lib/, so ../assets is package-relative.
 const defaultAssetReader: AssetReader = name => readFileSync(new URL(`../assets/${name}`, import.meta.url))
 const icons = new Set(['icon-192.png', 'icon-512.png', 'maskable-512.png', 'apple-touch-icon.png'])
+export const iconPaths = [...icons].map(name => `${BASE}/icons/${name}`)
 
-/** Static, allowlisted routes. Existing host/auth middleware stays in charge. */
+/** Fixed public installation assets. Register as exact routes only: no broad
+ * public prefix, dynamic lookup, query-derived content, or user data. */
 export function createPwaHandler(readAsset: AssetReader = defaultAssetReader) {
   return (req: IncomingMessage, res: ServerResponse): void => {
-    res.setHeader('Cache-Control', 'private, no-store')
+    // Public metadata only. It must remain retrievable by the Android installer,
+    // which may not send the signed-in browser's cookies. Never add private data.
+    res.setHeader('Cache-Control', 'public, max-age=300')
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
-    // Vary also prevents incorrectly configured intermediaries reusing a login response.
-    res.setHeader('Vary', 'Cookie')
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD')
       res.writeHead(405)

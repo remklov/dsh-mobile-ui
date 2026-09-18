@@ -20,9 +20,9 @@ test('static routes: allowlist, safe URLs, headers, methods, and missing files',
   for (const path of paths) {
     const response = await fetch(base + path)
     assert.equal(response.status, 200)
-    assert.equal(response.headers.get('cache-control'), 'private, no-store')
+    assert.match(response.headers.get('cache-control')!, /^public, max-age=/)
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff')
-    assert.equal(response.headers.get('vary'), 'Cookie')
+    assert.equal(response.headers.get('vary'), null)
     assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin')
     assert.equal((await fetch(base + path, { method: 'HEAD' })).status, 200)
     assert.equal(await (await fetch(base + path, { method: 'HEAD' })).text(), '')
@@ -34,6 +34,7 @@ test('static routes: allowlist, safe URLs, headers, methods, and missing files',
   for (const path of ['/unknown', '/icons/secret', '/icons/%2e%2e%2fpackage.json', '/icons/icon-192.png/extra']) {
     assert.equal((await fetch(base + BASE + path)).status, 404)
   }
+  assert.ok(paths.every(path => path.startsWith('/auth/mobile-workbench-pwa/')))
   assert.deepEqual(await (await fetch(base + BASE + '/manifest.webmanifest')).json(), manifest)
   assert.equal(manifest.start_url, '/')
   assert.equal(manifest.display, 'standalone')
@@ -42,7 +43,7 @@ test('static routes: allowlist, safe URLs, headers, methods, and missing files',
 test('head injection preserves zoom, is idempotent, and respects another manifest', () => {
   const input = '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div></body></html>'
   const output = injectHead(input)
-  assert.match(output, /crossorigin="use-credentials"/)
+  assert.match(output, /crossorigin="anonymous"/)
   assert.match(output, /initial-scale=1, viewport-fit=cover/)
   assert.doesNotMatch(output, /user-scalable|maximum-scale/)
   assert.equal(injectHead(output), output)

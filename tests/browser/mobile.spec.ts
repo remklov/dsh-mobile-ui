@@ -19,7 +19,7 @@ test.beforeAll(async () => {
   for (const name of ['icon-192.png','icon-512.png','maskable-512.png','apple-touch-icon.png']) icons.set(name, await readFile(`assets/${name}`))
   server = createServer((req, res) => {
     const path = new URL(req.url!, 'http://localhost').pathname
-    if (path.startsWith('/mobile-workbench/')) return pwa(req, res)
+    if (path.startsWith('/auth/mobile-workbench-pwa/')) return pwa(req, res)
     res.setHeader('Cache-Control', 'no-store')
     const script = path === '/fixture.js' ? fixture.outputFiles[0].contents : path === '/layout.js' ? appFrame : path === '/plugin.js' ? plugin : null
     if (script) { res.setHeader('Content-Type', 'text/javascript'); res.end(script); return }
@@ -47,6 +47,16 @@ test('phone layout spans screen and drawer opens, traps focus, closes, and resto
   await expect(page.getByRole('button', { name: /open navigation/i })).toBeVisible()
   const main = page.locator('main')
   await expect.poll(async () => (await main.boundingBox())?.width).toBe(390)
+  await expect(page.locator('[data-conversation-header-corner]')).toBeHidden()
+  const details = page.getByRole('button', { name: 'Open file and details panel', exact: true })
+  await expect(details).toBeVisible()
+  const app = page.getByRole('button', { name: 'App', exact: true })
+  const detailsBox = await details.boundingBox()
+  const appBox = await app.boundingBox()
+  expect(detailsBox!.x + detailsBox!.width).toBeLessThanOrEqual(appBox!.x)
+  await details.click()
+  await expect(page.getByRole('dialog', { name: 'Details' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
   const menu = page.getByRole('button', { name: /open navigation/i })
   await menu.click()
   await expect(page.getByRole('button', { name: 'New session', exact: true })).toBeVisible()
@@ -73,10 +83,12 @@ test('phone layout spans screen and drawer opens, traps focus, closes, and resto
 test('real manifest and root worker register without caching; disposal restores DOM', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto(origin)
-  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'use-credentials')
-  await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration('/'))?.active?.scriptURL)).toBe(`${origin}/mobile-workbench/sw.js`)
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('crossorigin', 'anonymous')
+  await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration('/'))?.active?.scriptURL)).toBe(`${origin}/auth/mobile-workbench-pwa/sw.js`)
   expect(await page.evaluate(() => caches.keys())).toEqual([])
-  const manifest = await (await page.request.get(origin + '/mobile-workbench/manifest.webmanifest')).json()
+  const manifestResponse = await page.request.get(origin + '/auth/mobile-workbench-pwa/manifest.webmanifest')
+  expect(manifestResponse.headers()['cache-control']).toContain('public')
+  const manifest = await manifestResponse.json()
   expect(manifest.display).toBe('standalone')
   await page.evaluate(() => caches.open('unrelated-plugin-test'))
   await page.getByRole('button', { name: 'App', exact: true }).click()

@@ -66,6 +66,7 @@ function MobileWorkbench({ layout }: Props) {
   const [workerStatus, setWorkerStatus] = useState<WorkerStatus | 'starting'>('starting')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [rightPanelAvailable, setRightPanelAvailable] = useState(false)
   const workerOperation = useRef<Promise<unknown>>(Promise.resolve())
   const ios = isAppleMobile(navigator.userAgent, navigator.platform, navigator.maxTouchPoints)
 
@@ -74,6 +75,16 @@ function MobileWorkbench({ layout }: Props) {
     adapter.current = attachMobileAdapter(root.current, layout, setState)
     return () => { adapter.current?.dispose(); adapter.current = null }
   }, [layout])
+
+  useEffect(() => {
+    const frame = adapter.current?.frame
+    if (!frame) return
+    const refresh = () => setRightPanelAvailable(frame.querySelector('[data-sidebar-right-expand]') !== null)
+    refresh()
+    const observer = new MutationObserver(refresh)
+    observer.observe(frame, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -148,6 +159,10 @@ function MobileWorkbench({ layout }: Props) {
       <div data-mwb-bar="">
         <button type="button" data-mwb-button="" aria-label="Open navigation" aria-expanded={state.drawerOpen} onClick={() => { setAppOpen(false); adapter.current?.toggle() }}>☰</button>
         <span data-mwb-title="">DSH</span>
+        {rightPanelAvailable && <button type="button" data-mwb-button="" data-mwb-open-details="" aria-label="Open file and details panel" onClick={() => {
+          const native = adapter.current?.frame.querySelector<HTMLButtonElement>('[data-sidebar-right-expand]')
+          native?.click()
+        }}>▣</button>}
         <button type="button" data-mwb-button="" aria-haspopup="dialog" aria-expanded={appOpen} onClick={() => { adapter.current?.close(); setAppOpen(true) }}>App</button>
       </div>
       {state.drawerOpen && <button type="button" data-mwb-backdrop="" tabIndex={-1} aria-label="Close navigation" onClick={() => adapter.current?.close()} />}

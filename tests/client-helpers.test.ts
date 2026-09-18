@@ -18,17 +18,17 @@ test('keyboard geometry adjusts only unzoomed, editing, reduced visual viewport'
 })
 
 test('worker ownership requires exact same-origin pathname', () => {
-  assert.equal(isOwnWorker('https://dsh.example/mobile-workbench/sw.js', 'https://dsh.example'), true)
-  assert.equal(isOwnWorker('https://dsh.example/mobile-workbench/sw.js?v=2', 'https://dsh.example'), true)
-  assert.equal(isOwnWorker('https://other.example/mobile-workbench/sw.js', 'https://dsh.example'), false)
+  assert.equal(isOwnWorker('https://dsh.example/auth/mobile-workbench-pwa/sw.js', 'https://dsh.example'), true)
+  assert.equal(isOwnWorker('https://dsh.example/auth/mobile-workbench-pwa/sw.js?v=2', 'https://dsh.example'), true)
+  assert.equal(isOwnWorker('https://other.example/auth/mobile-workbench-pwa/sw.js', 'https://dsh.example'), false)
   assert.equal(isOwnWorker('https://dsh.example/sw.js', 'https://dsh.example'), false)
-  assert.equal(isOwnWorker('https://dsh.example/mobile-workbench/sw.js.bak', 'https://dsh.example'), false)
+  assert.equal(isOwnWorker('https://dsh.example/auth/mobile-workbench-pwa/sw.js.bak', 'https://dsh.example'), false)
 })
 
 test('manifest ownership never matches another origin or plugin', () => {
-  assert.equal(isOwnManifest('/mobile-workbench/manifest.webmanifest', 'https://dsh.example'), true)
+  assert.equal(isOwnManifest('/auth/mobile-workbench-pwa/manifest.webmanifest', 'https://dsh.example'), true)
   assert.equal(isOwnManifest('/pwa/manifest.webmanifest', 'https://dsh.example'), false)
-  assert.equal(isOwnManifest('https://other.example/mobile-workbench/manifest.webmanifest', 'https://dsh.example'), false)
+  assert.equal(isOwnManifest('https://other.example/auth/mobile-workbench-pwa/manifest.webmanifest', 'https://dsh.example'), false)
 })
 
 test('narrow sidebar preference restoration never toggles the separate desktop preference', () => {

@@ -48,7 +48,7 @@ function renderSlot(name: string, props: any) {
     {!props.collapsed && <><button>New session</button><a href="#session">Example session</a><button>Settings</button></>}
   </nav>
   if (name === 'main') return <main style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-    <header data-conversation-header><h1>Fixture conversation</h1><button onClick={() => frameStore.actions.openRightbar(false, true)}>Open details</button></header>
+    <header data-conversation-header><h1>Fixture conversation</h1><span data-conversation-header-corner><button data-sidebar-right-expand onClick={() => frameStore.actions.openRightbar(false, true)}>Open details</button></span></header>
     <section style={{ flex: 1, overflow: 'auto' }}><p>Contract fixture using the actual DSH AppFrame.</p><button>Conversation action</button></section>
     <form data-composer style={{ padding: 12 }} onSubmit={e => e.preventDefault()}><textarea placeholder="Message"/><button>Send</button></form>
   </main>

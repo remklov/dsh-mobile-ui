@@ -51,12 +51,14 @@ without commandeering browser history or accessibility gestures.
 
 ## Auth integration findings
 
-With `@xgone/dsh-remote@0.3.3`, both earlier and later named route registrations
-are wrapped by authentication. The manifest requests credentials; icons, worker,
-and metadata remain gated. Root-relative URLs survive its Host/Origin rewrite.
-Explicit Content-Length is intentionally omitted because that version's gzip
-wrapper can preserve an incorrect uncompressed length. This was reproduced and
-fixed in the isolated real-auth integration test.
+With `@xgone/dsh-remote@0.3.3`, both earlier and later named routes are wrapped
+except `/auth/*`, its documented public plane. Android's installation service may
+not share the signed-in tab's cookies, so static manifest/icons/lifecycle worker
+use the narrow `/auth/mobile-workbench-pwa/*` child and anonymous manifest mode.
+The files contain no user data and grant no access; root application/API routes
+remain gated. Root-relative URLs survive Host/Origin rewriting. Explicit
+Content-Length is omitted because that auth version's gzip wrapper can preserve
+an incorrect uncompressed length; the integration test reproduced this.
 
 Its hot-unload behavior has a separate upstream limitation: disposing the auth
 plugin leaves its standalone login fallback active even after named routes are
@@ -64,9 +66,9 @@ unwrapped. The test documents this rather than weakening an assertion about
 protected content. Use normal process restarts, not auth hot-unload, for deployment
 changes. The mobile plugin's own route/tap disposal and reactivation are tested.
 
-Do not place PWA routes under `/auth`, `/assets`, `/plugins`, or append `?rev=`.
-Do not assume that passing a normal authenticated fetch proves every phone OS can
-fetch gated installation assets. Real-device installation remains a release check.
+Do not place PWA routes outside the dedicated `/auth/mobile-workbench-pwa/`
+allowlist, under `/assets` or `/plugins`, or append `?rev=`. Public metadata must
+remain static and non-sensitive. Real-device installation remains a release check.
 
 ## Multi-plugin behavior
 

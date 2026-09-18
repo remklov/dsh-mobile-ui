@@ -79,8 +79,11 @@ workaround. Nothing in this plugin makes a local server remotely accessible.
 
 ## Authentication and privacy
 
-- Routes use `/mobile-workbench/` on the existing server.
-- The manifest uses `crossorigin="use-credentials"`.
+- Static manifest, icon, and lifecycle-only worker routes use
+  `/auth/mobile-workbench-pwa/`, the authentication plugin's documented public
+  route family. They contain no user data and grant no DSH access. Android may
+  fetch install assets outside the signed-in tab's cookie jar.
+- The manifest uses `crossorigin="anonymous"`.
 - All generated URLs are root-relative; proxy-rewritten Host headers are ignored.
 - The service worker has **no fetch handler**, uses no CacheStorage, and stores no
   documents, API responses, authentication responses, or conversation content.
@@ -90,8 +93,10 @@ workaround. Nothing in this plugin makes a local server remotely accessible.
 - No telemetry, external CDN, remote fonts, third-party endpoints, or secret files.
 
 `@xgone/dsh-remote@0.3.3` was inspected specifically. It wraps all named routes,
-including routes registered later. The plugin deliberately does not use its
-`/auth/` bypass or its immutable `/assets/` and `/plugins/` namespaces. See the
+including routes registered later, except its public `/auth/*` plane. This plugin
+uses a narrowly named child of that plane only for static installation metadata;
+the application, APIs, and conversations remain gated. It avoids the auth
+plugin's immutable `/assets/` and `/plugins/` namespaces. See the
 [security notes](SECURITY.md) and optional real-auth integration test.
 
 ## Uninstall
@@ -104,7 +109,7 @@ dsh plugin --profile web remove dsh-mobile-workbench
 ```
 
 If the plugin was already removed, unregister **only** the worker whose script
-ends in `/mobile-workbench/sw.js` via browser developer tools → Application →
+ends in `/auth/mobile-workbench-pwa/sw.js` via browser developer tools → Application →
 Service Workers. Do not remove unrelated workers or clear all origin caches.
 Removing a server package cannot remotely uninstall a home-screen icon; remove
 that icon through your phone's normal app controls. The leftover lifecycle-only

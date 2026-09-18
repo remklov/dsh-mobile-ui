@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-export declare const BASE = "/mobile-workbench";
-export declare const WORKER_PATH = "/mobile-workbench/sw.js";
-export declare const MANIFEST_PATH = "/mobile-workbench/manifest.webmanifest";
+export declare const BASE = "/auth/mobile-workbench-pwa";
+export declare const WORKER_PATH = "/auth/mobile-workbench-pwa/sw.js";
+export declare const MANIFEST_PATH = "/auth/mobile-workbench-pwa/manifest.webmanifest";
 /** No hostnames, user data, tokens, or environment values enter the manifest. */
 export declare const manifest: {
     readonly id: "/";
@@ -14,17 +14,17 @@ export declare const manifest: {
     readonly background_color: "#101827";
     readonly theme_color: "#101827";
     readonly icons: readonly [{
-        readonly src: "/mobile-workbench/icons/icon-192.png";
+        readonly src: "/auth/mobile-workbench-pwa/icons/icon-192.png";
         readonly sizes: "192x192";
         readonly type: "image/png";
         readonly purpose: "any";
     }, {
-        readonly src: "/mobile-workbench/icons/icon-512.png";
+        readonly src: "/auth/mobile-workbench-pwa/icons/icon-512.png";
         readonly sizes: "512x512";
         readonly type: "image/png";
         readonly purpose: "any";
     }, {
-        readonly src: "/mobile-workbench/icons/maskable-512.png";
+        readonly src: "/auth/mobile-workbench-pwa/icons/maskable-512.png";
         readonly sizes: "512x512";
         readonly type: "image/png";
         readonly purpose: "maskable";
@@ -39,5 +39,7 @@ export declare const workerScript = "// DSH Mobile Workbench v0.1.0 \u2014 netwo
  */
 export declare function injectHead(html: string): string;
 export type AssetReader = (name: string) => Buffer;
-/** Static, allowlisted routes. Existing host/auth middleware stays in charge. */
+export declare const iconPaths: string[];
+/** Fixed public installation assets. Register as exact routes only: no broad
+ * public prefix, dynamic lookup, query-derived content, or user data. */
 export declare function createPwaHandler(readAsset?: AssetReader): (req: IncomingMessage, res: ServerResponse) => void;
