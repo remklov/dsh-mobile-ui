@@ -68,7 +68,11 @@
   [data-mwb-frame][data-mwb-details-open] [data-mwb-bar] { display: none; }
   /* Hide only the duplicated native right-panel trigger on phones. Other
      conversation header actions remain available in their native header. */
-  [data-mwb-frame] [data-conversation-header-corner] [data-sidebar-right-expand] { display: none !important; }
+  [data-mwb-frame] [data-sidebar-right-expand] { display: none !important; }
+  /* dsh-better-sidebar renders a fixed top-right toggle cluster outside the
+     AppFrame's native header. Its own mobile panel remains reachable from file
+     links; hiding this duplicate keeps the mobile App control unobstructed. */
+  [data-mwb-frame] [data-dsh-panel-host] > [data-dsh-toggle-cluster] { display: none !important; }
   [data-mwb-frame] [data-mwb-title] { flex: 1; font: 600 14px/1.3 system-ui, sans-serif; }
   [data-mwb-frame] [data-mwb-button],
   [data-mwb-frame] [data-mwb-drawer-close] {

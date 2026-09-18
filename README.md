@@ -72,9 +72,12 @@ root-scoped worker is detected, it avoids taking ownership instead of overwritin
    expired, sign in again. The plugin does not share or copy credentials.
 
 The browser/OS decides when installation is available. HTTP LAN IPs are not
-secure contexts; loopback HTTP is only a development exception. Since login
-plugins may require authentication even for icons/manifest, OS-level installation
-must be checked on the actual phone. Never weaken authentication as an automatic
+secure contexts; loopback HTTP is only a development exception. Android Chrome's
+full app installation also uses Google's WebAPK minting service and Google Play.
+A Tailscale Serve-only hostname uses private split DNS, so it may fall back to a
+Chrome shortcut even though the phone can open DSH; use a public-DNS,
+Internet-routable HTTPS origin (for example a deliberately enabled Tailscale
+Funnel) when a WebAPK is required. Never weaken DSH authentication as a
 workaround. Nothing in this plugin makes a local server remotely accessible.
 
 ## Authentication and privacy

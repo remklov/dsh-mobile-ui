@@ -36,6 +36,7 @@ test('static routes: allowlist, safe URLs, headers, methods, and missing files',
   }
   assert.ok(paths.every(path => path.startsWith('/auth/mobile-workbench-pwa/')))
   assert.deepEqual(await (await fetch(base + BASE + '/manifest.webmanifest')).json(), manifest)
+  assert.equal(manifest.id, '/auth/mobile-workbench-pwa/app')
   assert.equal(manifest.start_url, '/')
   assert.equal(manifest.display, 'standalone')
 })

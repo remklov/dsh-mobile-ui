@@ -4,7 +4,7 @@ export declare const WORKER_PATH = "/auth/mobile-workbench-pwa/sw.js";
 export declare const MANIFEST_PATH = "/auth/mobile-workbench-pwa/manifest.webmanifest";
 /** No hostnames, user data, tokens, or environment values enter the manifest. */
 export declare const manifest: {
-    readonly id: "/";
+    readonly id: "/auth/mobile-workbench-pwa/app";
     readonly name: "DSH Mobile Workbench";
     readonly short_name: "DSH";
     readonly description: "Mobile access to your existing DeepSeek Harness workspace";

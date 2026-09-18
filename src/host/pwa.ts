@@ -10,7 +10,8 @@ export const MANIFEST_PATH = `${BASE}/manifest.webmanifest`
 
 /** No hostnames, user data, tokens, or environment values enter the manifest. */
 export const manifest = {
-  id: '/',
+  // Plugin-specific identity prevents collisions with an older root-id shortcut.
+  id: `${BASE}/app`,
   name: 'DSH Mobile Workbench',
   short_name: 'DSH',
   description: 'Mobile access to your existing DeepSeek Harness workspace',

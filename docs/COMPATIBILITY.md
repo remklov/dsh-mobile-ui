@@ -70,6 +70,13 @@ Do not place PWA routes outside the dedicated `/auth/mobile-workbench-pwa/`
 allowlist, under `/assets` or `/plugins`, or append `?rev=`. Public metadata must
 remain static and non-sensitive. Real-device installation remains a release check.
 
+Chrome for Android installs a WebAPK through Google's minting service and Google
+Play. A Tailscale Serve-only `*.ts.net` name uses split DNS and is not resolvable
+from public DNS, so a true WebAPK is not guaranteed even when the phone can load
+all assets over its tailnet. Use a public-DNS, Internet-routable HTTPS origin (or
+Tailscale Funnel) when WebAPK installation is a requirement; otherwise Chrome may
+offer only a browser-managed home-screen shortcut.
+
 ## Multi-plugin behavior
 
 - Existing manifest: host head transform leaves it unchanged; client refuses a
