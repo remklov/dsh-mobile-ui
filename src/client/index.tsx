@@ -159,10 +159,24 @@ function MobileWorkbench({ layout }: Props) {
       <div data-mwb-bar="">
         <button type="button" data-mwb-button="" aria-label="Open navigation" aria-expanded={state.drawerOpen} onClick={() => { setAppOpen(false); adapter.current?.toggle() }}>☰</button>
         <span data-mwb-title="">DSH</span>
-        {rightPanelAvailable && <button type="button" data-mwb-button="" data-mwb-open-details="" aria-label="Open file and details panel" onClick={() => {
-          const native = adapter.current?.frame.querySelector<HTMLButtonElement>('[data-sidebar-right-expand]')
-          native?.click()
-        }}>▣</button>}
+        {rightPanelAvailable && <button type="button" data-mwb-button="" data-mwb-open-details=""
+          aria-expanded={state.detailsOpen}
+          aria-label={state.detailsOpen ? 'Close file and details panel' : 'Open file and details panel'}
+          onClick={() => {
+            // Closing needs the toggle: [data-sidebar-right-expand] only opens,
+            // and on phones it is hidden anyway. Fall back to the other control
+            // so a shell that ships only one of them still works.
+            const frame = adapter.current?.frame
+            const pick = (selector: string) =>
+              frame?.querySelector<HTMLButtonElement>(selector) ?? document.querySelector<HTMLButtonElement>(selector)
+            const order = state.detailsOpen
+              ? ['[data-sidebar-right-toggle]', '[data-sidebar-right-expand]']
+              : ['[data-sidebar-right-expand]', '[data-sidebar-right-toggle]']
+            for (const selector of order) {
+              const control = pick(selector)
+              if (control) { control.click(); return }
+            }
+          }}>{state.detailsOpen ? '✕' : '▣'}</button>}
         <button type="button" data-mwb-button="" aria-haspopup="dialog" aria-expanded={appOpen} onClick={() => { adapter.current?.close(); setAppOpen(true) }}>App</button>
       </div>
       {state.drawerOpen && <button type="button" data-mwb-backdrop="" tabIndex={-1} aria-label="Close navigation" onClick={() => adapter.current?.close()} />}

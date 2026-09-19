@@ -65,7 +65,9 @@
     background: var(--mwb-surface);
     border-bottom: 1px solid var(--mwb-border);
   }
-  [data-mwb-frame][data-mwb-details-open] [data-mwb-bar] { display: none; }
+  /* The bar deliberately STAYS while the details panel is open. Hiding it
+     removed the only way back: the native expand control is hidden on phones,
+     so the panel became a dead end. The ▣ button doubles as its close. */
   /* Hide only the duplicated native right-panel trigger on phones. Other
      conversation header actions remain available in their native header. */
   [data-mwb-frame] [data-sidebar-right-expand] { display: none !important; }
@@ -134,7 +136,9 @@
   [data-mwb-frame] [data-conversation-scroll] { min-width: 0; overscroll-behavior-y: contain; }
   [data-mwb-frame] [data-sidebar-right-panel="fullscreen"] {
     box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
+    /* Clear the bar, which stays on top of the panel. --mwb-bar-height already
+       includes the safe-area inset, so it must not be added a second time. */
+    padding-top: var(--mwb-bar-height);
     padding-right: env(safe-area-inset-right, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
     padding-left: env(safe-area-inset-left, 0px);
